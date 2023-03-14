@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Function to check if a file exists
+function file_exists() {
+  if [ -e "$1" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Check for target file argument
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <TARGET_FILE>"
+  exit 1
+fi
+
+TARGET_FILE="$1"
+REMOTE_NAME=$(basename "$TARGET_FILE")
+
+# Check if target file is a valid file
+if ! file_exists "$TARGET_FILE"; then
+  echo "Error: Invalid target file path"
+  exit 1
+fi
+
+# Check for required environment variables and prompt for input if missing
+if [ -z "$USERNAME" ]; then
+  read -rp "Enter your username: " USERNAME
+fi
+
+if [ -z "$PASSWORD" ]; then
+  read -rsp "Enter your password: " PASSWORD
+  echo
+fi
+
+if [ -z "$ARTIFACTORY_URL" ]; then
+  read -rp "Enter the Artifactory URL: " ARTIFACTORY_URL
+fi
+
+# Update the .profile or .bashrc file
+if file_exists "$HOME/.profile"; then
+  PROFILE_FILE="$HOME/.profile"
+elif file_exists "$HOME/.bashrc"; then
+  PROFILE_FILE="$HOME/.bashrc"
+else
+  echo "Error: .profile and .bashrc files are not found"
+  exit 1
+fi
+
+echo "export USERNAME=\"$USERNAME\"" >> "$PROFILE_FILE"
+echo "export PASSWORD=\"$PASSWORD\"" >> "$PROFILE_FILE"
+echo "export ARTIFACTORY_URL=\"$ARTIFACTORY_URL\"" >> "$PROFILE_FILE"
+
+# Upload the file to Artifactory with a progress bar
+curl -u"$USERNAME:$PASSWORD" --progress-bar -T "$TARGET_FILE" "${ARTIFACTORY_URL}/generic-local/$REMOTE_NAME"
