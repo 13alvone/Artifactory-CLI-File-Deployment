@@ -13,11 +13,22 @@ chmod +x artifactory_send
 2. Run the script by providing the target file as an argument:
 
 ```shell
-./artifactory_send <TARGET_FILE>
+./artifactory_send <TARGET_FILE> <TARGET_REPO>
+
+Available REPO's:
+----------------------
+'vm' --> VM ISO, OVF, etc
+'vb' --> VM Backup
+'b' --> Binary
+'d' --> Docker
+'db' --> Docker Backup
+'a' --> Audio
+'pdf' --> PDF
+'f' --> Funny
+'g' --> Games
+'o' --> Other
 ```
 
 The script will check for the required environment variables: `USERNAME`, `PASSWORD`, and `ARTIFACTORY_URL`. If any of these variables are missing, the script will prompt the user for input.
 
-After collecting the necessary credentials and Artifactory URL, the script will update the user's .profile or .bashrc file with the environment variables.
-
-**Note**: This script stores the password in plain text in the .profile or .bashrc file, which could be a security risk. Consider alternative methods for securely storing sensitive information, such as using a secrets management tool.
+**Note** This script requires seperate Artifactory-OSS installation with an addressable LAN IP with proper permissions, as well as the properly created repositories as precisely named above.
