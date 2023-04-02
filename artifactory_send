@@ -1,56 +1,184 @@
 #!/bin/bash
 
-# Function to check if a file exists
-function file_exists() {
-  if [ -e "$1" ]; then
+ARTIFACTORY_IP="<REPLACE_ME>"
+
+# Function to calculate the SHA256 checksum of a file
+function calculate_sha256() {
+  local file="$1"
+  local checksum
+  checksum=$(shasum -a 256 "$file" | awk '{print $1}')
+  echo "$checksum"
+}
+
+# Function to check if a file exists and is of a certain type
+function is_file_type() {
+  if [ -$1 "$2" ]; then
     return 0
   else
     return 1
   fi
 }
 
-# Check for target file argument
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <TARGET_FILE>"
+# Function to remove the tar file created for directories
+function remove_tar_file() {
+  local tar_file="$1"
+  echo "[i] Deleting tar file..."
+  rm -f "$tar_file"
+}
+
+# Check for target file and repository arguments
+if [ $# -ne 2 ]; then
+  echo "Usage: $0 <TARGET_PATH> <REPO>"
+  echo "Available REPO's:"
+  echo "----------------------"
+  echo "'vm' --> VM ISO, OVF, etc"
+  echo "'vt' --> VM Template"
+  echo "'vb' --> VM Backup"
+  echo "'b' --> Binary"
+  echo "'d' --> Docker"
+  echo "'db' --> Docker Backup"
+  echo "'a' --> Audio"
+  echo "'pdf' --> PDF"
+  echo "'f' --> Funny"
+  echo "'g' --> Games"
+  echo "'o' --> Other"
   exit 1
 fi
 
-TARGET_FILE="$1"
-REMOTE_NAME=$(basename "$TARGET_FILE")
+RATE_LIMIT="50M"
+TARGET_PATH="$1"
+REPO="$2"
 
-# Check if target file is a valid file
-if ! file_exists "$TARGET_FILE"; then
-  echo "Error: Invalid target file path"
+function url_encode() {
+  local encoded=""
+  local c
+  for (( i=0; i<${#1}; i++ )); do
+    c="${1:i:1}"
+    if [[ "$c" =~ [a-zA-Z0-9\.\_\-\~] ]]; then
+      encoded+="$c"
+    else
+      printf -v c '%02X' "'$c"
+      encoded+="%$c"
+    fi
+  done
+  echo "$encoded"
+}
+
+# Check if target path is a valid file or directory
+if ! is_file_type f "$TARGET_PATH" && ! is_file_type d "$TARGET_PATH"; then
+  if [ ! -e "$TARGET_PATH" ]; then
+    echo "[!] Error: Target path does not exist"
+  else
+    echo "[!] Error: Target path is neither a file nor a directory"
+  fi
+  echo "TARGET_PATH: $TARGET_PATH"
   exit 1
 fi
+
+REMOTE_NAME=$(basename "$TARGET_PATH" | url_encode)
 
 # Check for required environment variables and prompt for input if missing
-if [ -z "$USERNAME" ]; then
-  read -rp "Enter your username: " USERNAME
+if [ -z "$ARTIFACTORY_USERNAME" ]; then
+  read -rp "Enter your username: " ARTIFACTORY_USERNAME
 fi
 
-if [ -z "$PASSWORD" ]; then
-  read -rsp "Enter your password: " PASSWORD
-  echo
+if [ -z "$ARTIFACTORY_PASSWORD" ]; then
+  read -rsp "Enter your password: " ARTIFACTORY_PASSWORD
+  echo "[i] Consider adding the following lines to either your ~/.bashrc or ~/.profile files:"
+  echo "export ARTIFACTORY_USERNAME=\"$ARTIFACTORY_USERNAME\""
+  echo "export ARTIFACTORY_PASSWORD=\"$ARTIFACTORY_PASSWORD\""
+  echo "[+] Continuing..."
 fi
 
-if [ -z "$ARTIFACTORY_URL" ]; then
-  read -rp "Enter the Artifactory URL: " ARTIFACTORY_URL
-fi
+case "$REPO" in
+  vm)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm/"
+    ;;
+  vb)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm_backup/"
+    ;;
+  b)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/binary/"
+    ;;
+  d)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker/"
+    ;;
+  db)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker_backup/"
+    ;;
+  a)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/audio/"
+    ;;
+  m)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/audio/"
+    ;;
+  pdf)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/pdf/"
+    ;;
+  f)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/funny/"
+    ;;
+  g)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/games/"
+    ;;
+  o)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/other/"
+    ;;
+  *)
+    echo "Error: Invalid repository specified"
+    exit 1
+    ;;
+esac
 
-# Update the .profile or .bashrc file
-if file_exists "$HOME/.profile"; then
-  PROFILE_FILE="$HOME/.profile"
-elif file_exists "$HOME/.bashrc"; then
-  PROFILE_FILE="$HOME/.bashrc"
+# Upload the file or directory to Artifactory with a progress bar
+if is_file_type f "$TARGET_PATH"; then
+  # Upload a file to Artifactory
+  upload_response=$(curl -s --progress-bar --limit-rate $RATE_LIMIT -T "$TARGET_PATH" -u"$ARTIFACTORY_USERNAME:$ARTIFACTORY_PASSWORD" "${ARTIFACTORY_URL}${REMOTE_NAME}")
+echo "$upload_response"
+  echo ""
+
+  # Calculate local and remote file checksums
+  local_checksum=$(calculate_sha256 "$TARGET_PATH")
+  remote_checksum=$(echo "$upload_response" | sed -n 's/.*"sha256"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  remote_checksum="${remote_checksum:0:64}"
+
+  # Compare the checksums and delete the local file if they match
+  if [[ "$local_checksum" == "$remote_checksum" ]]; then
+    echo "[i] Checksums match. Deployment successful."
+    echo "[i] Deleting local file..."
+    rm -rf "$TARGET_PATH"
+  else
+    echo "[!] Error: Checksums do not match. Deployment may have failed."
+  fi
 else
-  echo "Error: .profile and .bashrc files are not found"
-  exit 1
+  echo "[!] Not an individual file, attempting to TAR it..."
+  TARGET_PATH=$(echo "$TARGET_PATH" | sed 's/\s*$//')
+  REMOTE_NAME=$(basename "$TARGET_PATH")
+  if [ -d "$TARGET_PATH" ]; then
+    PARENT_DIR=$(dirname "$TARGET_PATH")
+    CURRENT_DIR=$(pwd)
+    REMOTE_NAME="${REMOTE_NAME}.tar"
+    cd "$PARENT_DIR" || exit
+    tar -cvf "${REMOTE_NAME}" "$(basename "$TARGET_PATH")"
+    cd "$CURRENT_DIR" || exit
+  fi
+  ENCODED_REMOTE_NAME=$(url_encode "$REMOTE_NAME")
+  echo "[i] Tar Complete, now deploying to ${ARTIFACTORY_URL}${ENCODED_REMOTE_NAME}..."
+  curl --progress-bar --limit-rate $RATE_LIMIT -T "$REMOTE_NAME" -u"$ARTIFACTORY_USERNAME:$ARTIFACTORY_PASSWORD" "${ARTIFACTORY_URL}${ENCODED_REMOTE_NAME}"
+  echo ""
+
+  # Calculate local and remote file checksums
+  local_checksum=$(calculate_sha256 "$TARGET_PATH")
+  remote_checksum=$(echo "$upload_response" | sed -n 's/.*"sha256"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  remote_checksum="${remote_checksum:0:64}"
+
+  # Compare the checksums and delete the tar file if they match
+  if [ "$local_tar_checksum" == "$remote_tar_checksum" ]; then
+    echo "[i] Checksums match. Deployment successful."
+    remove_tar_file "$REMOTE_NAME"
+    rm -rf "$TARGET_PATH"
+  else
+    echo "[!] Error: Checksums do not match. Deployment may have failed."
+  fi
 fi
 
-echo "export USERNAME=\"$USERNAME\"" >> "$PROFILE_FILE"
-echo "export PASSWORD=\"$PASSWORD\"" >> "$PROFILE_FILE"
-echo "export ARTIFACTORY_URL=\"$ARTIFACTORY_URL\"" >> "$PROFILE_FILE"
-
-# Upload the file to Artifactory with a progress bar
-curl -u"$USERNAME:$PASSWORD" --progress-bar -T "$TARGET_FILE" "${ARTIFACTORY_URL}/generic-local/$REMOTE_NAME"
