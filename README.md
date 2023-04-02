@@ -33,6 +33,7 @@ The script will check for the required environment variables: `USERNAME`, `PASSW
 
 **Note** This script requires seperate Artifactory-OSS installation with an addressable LAN IP with proper permissions, as well as the properly created repositories as precisely named below:
 
+```
 > 'vm'             --> http://$ARTIFACTORY_IP:8082/artifactory/vm/
 > 'vb'             --> http://$ARTIFACTORY_IP:8082/artifactory/vm_backup/
 > 'binary'         --> http://$ARTIFACTORY_IP:8082/artifactory/binary/
@@ -43,3 +44,4 @@ The script will check for the required environment variables: `USERNAME`, `PASSW
 > 'funny'          --> http://$ARTIFACTORY_IP:8082/artifactory/funny/
 > 'games'          --> http://$ARTIFACTORY_IP:8082/artifactory/games/
 > 'other'          --> http://$ARTIFACTORY_IP:8082/artifactory/other/
+```
