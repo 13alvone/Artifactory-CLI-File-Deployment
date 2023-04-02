@@ -45,3 +45,6 @@ The script will check for the required environment variables: `USERNAME`, `PASSW
 > 'games'          --> http://$ARTIFACTORY_IP:8082/artifactory/games/
 > 'other'          --> http://$ARTIFACTORY_IP:8082/artifactory/other/
 ```
+
+> Please visit JFrog directly to obtain free Artifactory. (Thanks for great, accessible software, JFrog!)
+Download Artifactory|https://jfrog.com/community/download-artifactory-oss/
