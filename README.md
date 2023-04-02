@@ -33,13 +33,13 @@ The script will check for the required environment variables: `USERNAME`, `PASSW
 
 **Note** This script requires seperate Artifactory-OSS installation with an addressable LAN IP with proper permissions, as well as the properly created repositories as precisely named below:
 
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm_backup/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/binary/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker_backup/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/audio/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/pdf/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/funny/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/games/"
-> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/other/"
+> 'vm'             --> http://$ARTIFACTORY_IP:8082/artifactory/vm/
+> 'vb'             --> http://$ARTIFACTORY_IP:8082/artifactory/vm_backup/
+> 'binary'         --> http://$ARTIFACTORY_IP:8082/artifactory/binary/
+> 'docker'         --> http://$ARTIFACTORY_IP:8082/artifactory/docker/
+> 'docker_backup'  --> http://$ARTIFACTORY_IP:8082/artifactory/docker_backup/
+> 'audio'          --> http://$ARTIFACTORY_IP:8082/artifactory/audio/
+> 'pdf'            --> http://$ARTIFACTORY_IP:8082/artifactory/pdf/
+> 'funny'          --> http://$ARTIFACTORY_IP:8082/artifactory/funny/
+> 'games'          --> http://$ARTIFACTORY_IP:8082/artifactory/games/
+> 'other'          --> http://$ARTIFACTORY_IP:8082/artifactory/other/
