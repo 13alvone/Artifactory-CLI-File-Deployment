@@ -31,4 +31,15 @@ Available REPO's:
 
 The script will check for the required environment variables: `USERNAME`, `PASSWORD`, and `ARTIFACTORY_URL`. If any of these variables are missing, the script will prompt the user for input.
 
-**Note** This script requires seperate Artifactory-OSS installation with an addressable LAN IP with proper permissions, as well as the properly created repositories as precisely named above.
+**Note** This script requires seperate Artifactory-OSS installation with an addressable LAN IP with proper permissions, as well as the properly created repositories as precisely named below:
+
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm_backup/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/binary/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker_backup/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/audio/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/pdf/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/funny/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/games/"
+> ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/other/"
