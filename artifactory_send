@@ -32,7 +32,6 @@ if [ $# -ne 2 ]; then
   echo "Available REPO's:"
   echo "----------------------"
   echo "'vm' --> VM ISO, OVF, etc"
-  echo "'vt' --> VM Template"
   echo "'vb' --> VM Backup"
   echo "'b' --> Binary"
   echo "'d' --> Docker"
