@@ -23,6 +23,7 @@ Available REPO's:
 'd' --> Docker
 'db' --> Docker Backup
 'a' --> Audio
+'doc' --> Doc
 'pdf' --> PDF
 'f' --> Funny
 'g' --> Games
@@ -40,6 +41,7 @@ The script will check for the required environment variables: `USERNAME`, `PASSW
 > 'docker'         --> http://$ARTIFACTORY_IP:8082/artifactory/docker/
 > 'docker_backup'  --> http://$ARTIFACTORY_IP:8082/artifactory/docker_backup/
 > 'audio'          --> http://$ARTIFACTORY_IP:8082/artifactory/audio/
+> 'doc'            --> http://$ARTIFACTORY_IP:8082/artifactory/documents/
 > 'pdf'            --> http://$ARTIFACTORY_IP:8082/artifactory/pdf/
 > 'funny'          --> http://$ARTIFACTORY_IP:8082/artifactory/funny/
 > 'games'          --> http://$ARTIFACTORY_IP:8082/artifactory/games/
