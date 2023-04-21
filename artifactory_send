@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ARTIFACTORY_IP="<REPLACE_ME>"
+ARTIFACTORY_URL="<REPLACE_ME>"
 
 # Function to calculate the SHA256 checksum of a file
 function calculate_sha256() {
@@ -26,17 +26,49 @@ function remove_tar_file() {
   rm -f "$tar_file"
 }
 
+# Function to encode the original filename to avoid special characters in string
+function urlencode() {
+    python3 -c "import sys, urllib.parse as ul; print(ul.quote_plus(sys.argv[1]))" "$1"
+}
+
+# Function to remove special characters from a given file path's filename string.
+remove_special_chars() {
+    # Check if a file path is provided
+    if [ -z "$1" ]; then
+        echo "$1"
+    fi
+
+    # Get the file path and separate the directory path and the file name
+    filepath="$1"
+    dirpath=$(dirname "$filepath")
+    filename=$(basename "$filepath")
+
+    # Remove special characters from the file name
+    modified_filename=$(echo "$filename" | sed 's/[^a-zA-Z0-9._-]//g')
+
+    # Check if the file name has changed after removing special characters
+    if [ "$filename" != "$modified_filename" ]; then
+        new_filepath="${dirpath}/${modified_filename}"
+        mv "$filepath" "$new_filepath"
+        echo "$new_filepath"
+    else
+        echo "$filepath"
+    fi
+}
+
 # Check for target file and repository arguments
 if [ $# -ne 2 ]; then
   echo "Usage: $0 <TARGET_PATH> <REPO>"
   echo "Available REPO's:"
   echo "----------------------"
   echo "'vm' --> VM ISO, OVF, etc"
+  echo "'vt' --> VM Template"
   echo "'vb' --> VM Backup"
   echo "'b' --> Binary"
   echo "'d' --> Docker"
   echo "'db' --> Docker Backup"
   echo "'a' --> Audio"
+  echo "'doc' --> DOC"
   echo "'pdf' --> PDF"
   echo "'f' --> Funny"
   echo "'g' --> Games"
@@ -46,22 +78,8 @@ fi
 
 RATE_LIMIT="50M"
 TARGET_PATH="$1"
+FULL_FILEPATH=$(readlink -f "$TARGET_PATH")
 REPO="$2"
-
-function url_encode() {
-  local encoded=""
-  local c
-  for (( i=0; i<${#1}; i++ )); do
-    c="${1:i:1}"
-    if [[ "$c" =~ [a-zA-Z0-9\.\_\-\~] ]]; then
-      encoded+="$c"
-    else
-      printf -v c '%02X' "'$c"
-      encoded+="%$c"
-    fi
-  done
-  echo "$encoded"
-}
 
 # Check if target path is a valid file or directory
 if ! is_file_type f "$TARGET_PATH" && ! is_file_type d "$TARGET_PATH"; then
@@ -74,7 +92,7 @@ if ! is_file_type f "$TARGET_PATH" && ! is_file_type d "$TARGET_PATH"; then
   exit 1
 fi
 
-REMOTE_NAME=$(basename "$TARGET_PATH" | url_encode)
+REMOTE_NAME=$(basename "$TARGET_PATH" | urlencode)
 
 # Check for required environment variables and prompt for input if missing
 if [ -z "$ARTIFACTORY_USERNAME" ]; then
@@ -91,43 +109,51 @@ fi
 
 case "$REPO" in
   vm)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/vm/"
+    ;;
+  vt)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/vm_template/"
     ;;
   vb)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/vm_backup/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/vm_backup/"
     ;;
   b)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/binary/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/binary/"
     ;;
   d)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/docker/"
     ;;
   db)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/docker_backup/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/docker_backup/"
     ;;
   a)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/audio/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/audio/"
     ;;
   m)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/audio/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/audio/"
+    ;;
+  doc)
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/documents/"
     ;;
   pdf)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/pdf/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/pdf/"
     ;;
   f)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/funny/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/funny/"
     ;;
   g)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/games/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/games/"
     ;;
   o)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_IP:8082/artifactory/other/"
+    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/other/"
     ;;
   *)
     echo "Error: Invalid repository specified"
     exit 1
     ;;
 esac
+
+TARGET_PATH=$(remove_special_chars "$FULL_FILEPATH")
 
 # Upload the file or directory to Artifactory with a progress bar
 if is_file_type f "$TARGET_PATH"; then
@@ -149,6 +175,7 @@ echo "$upload_response"
   else
     echo "[!] Error: Checksums do not match. Deployment may have failed."
   fi
+
 else
   echo "[!] Not an individual file, attempting to TAR it..."
   TARGET_PATH=$(echo "$TARGET_PATH" | sed 's/\s*$//')
@@ -161,7 +188,7 @@ else
     tar -cvf "${REMOTE_NAME}" "$(basename "$TARGET_PATH")"
     cd "$CURRENT_DIR" || exit
   fi
-  ENCODED_REMOTE_NAME=$(url_encode "$REMOTE_NAME")
+  ENCODED_REMOTE_NAME=$(urlencode "$REMOTE_NAME")
   echo "[i] Tar Complete, now deploying to ${ARTIFACTORY_URL}${ENCODED_REMOTE_NAME}..."
   curl --progress-bar --limit-rate $RATE_LIMIT -T "$REMOTE_NAME" -u"$ARTIFACTORY_USERNAME:$ARTIFACTORY_PASSWORD" "${ARTIFACTORY_URL}${ENCODED_REMOTE_NAME}"
   echo ""
@@ -180,4 +207,3 @@ else
     echo "[!] Error: Checksums do not match. Deployment may have failed."
   fi
 fi
-
