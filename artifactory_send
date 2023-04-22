@@ -1,9 +1,7 @@
-#!/bin/bash
-
-ARTIFACTORY_URL="<REPLACE_ME>"
+#!/usr/bin/env sh
 
 # Function to calculate the SHA256 checksum of a file
-function calculate_sha256() {
+calculate_sha256() {
   local file="$1"
   local checksum
   checksum=$(shasum -a 256 "$file" | awk '{print $1}')
@@ -11,8 +9,9 @@ function calculate_sha256() {
 }
 
 # Function to check if a file exists and is of a certain type
-function is_file_type() {
-  if [ -$1 "$2" ]; then
+is_file_type() {
+  # if [ -$1 "$2" ]; then
+  if [ -${1} "${2}" ]; then
     return 0
   else
     return 1
@@ -20,15 +19,27 @@ function is_file_type() {
 }
 
 # Function to remove the tar file created for directories
-function remove_tar_file() {
+remove_tar_file() {
   local tar_file="$1"
   echo "[i] Deleting tar file..."
   rm -f "$tar_file"
 }
 
 # Function to encode the original filename to avoid special characters in string
-function urlencode() {
+urlencode() {
     python3 -c "import sys, urllib.parse as ul; print(ul.quote_plus(sys.argv[1]))" "$1"
+}
+
+# Function to get the Full File path, regardless of zsh or bash, or any other...
+get_abs_path() {
+  if type realpath >/dev/null 2>&1; then
+    realpath "$1"
+  elif type readlink >/dev/null 2>&1; then
+    readlink -f "$1"
+  else
+    echo "Error: realpath or readlink command not found. Please try again." >&2
+    exit 1
+  fi
 }
 
 # Function to remove special characters from a given file path's filename string.
@@ -78,7 +89,10 @@ fi
 
 RATE_LIMIT="50M"
 TARGET_PATH="$1"
-FULL_FILEPATH=$(readlink -f "$TARGET_PATH")
+# FULL_FILEPATH=$(readlink -f "$TARGET_PATH")
+# FULL_FILEPATH=$(realpath "$TARGET_PATH")
+FULL_FILEPATH=$(get_abs_path "$TARGET_PATH")
+
 REPO="$2"
 
 # Check if target path is a valid file or directory
@@ -109,43 +123,43 @@ fi
 
 case "$REPO" in
   vm)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/vm/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/vm/"
     ;;
   vt)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/vm_template/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/vm_template/"
     ;;
   vb)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/vm_backup/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/vm_backup/"
     ;;
   b)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/binary/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/binary/"
     ;;
   d)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/docker/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/docker/"
     ;;
   db)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/docker_backup/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/docker_backup/"
     ;;
   a)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/audio/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/audio/"
     ;;
   m)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/audio/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/audio/"
     ;;
   doc)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/documents/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/documents/"
     ;;
   pdf)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/pdf/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/pdf/"
     ;;
   f)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/funny/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/funny/"
     ;;
   g)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/games/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/games/"
     ;;
   o)
-    ARTIFACTORY_URL="http://$ARTIFACTORY_URL:8082/artifactory/other/"
+    ARTIFACTORY_URL="http://artifactory.speakes:8082/artifactory/other/"
     ;;
   *)
     echo "Error: Invalid repository specified"
